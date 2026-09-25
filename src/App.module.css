@@ -1,0 +1,48 @@
+
+.app {
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+/* Cabeçalho */
+
+.header {
+  background-color: #1e3a8a;
+  color: #ffffff;
+  padding: 20px 30px;
+}
+
+.logo {
+  margin: 0;
+  font-size: 26px;
+}
+
+/* Menu */
+
+.menu {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 15px 30px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.link {
+  text-decoration: none;
+  color: #1e293b;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.link:hover {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+/* Área principal */
+
+.main {
+  padding: 30px;
+}

@@ -1,28 +1,29 @@
 
 import { useEffect, useState } from "react";
+import styles from "./Categorias.module.css";
 
 function Categorias() {
-
   const [nome, setNome] = useState("");
 
   const [categorias, setCategorias] = useState<string[]>(() => {
-    const categoriasSalvas = localStorage.getItem("categorias");
+    const dados = localStorage.getItem("categorias");
 
-    if (categoriasSalvas) {
-      return JSON.parse(categoriasSalvas);
+    if (dados) {
+      return JSON.parse(dados);
     }
 
     return [];
   });
 
-  const [categoriaEditando, setCategoriaEditando] =
-    useState<number | null>(null);
+  const [categoriaEditando, setCategoriaEditando] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
     localStorage.setItem("categorias", JSON.stringify(categorias));
   }, [categorias]);
 
-  function cadastrarCategoria(event: React.FormEvent) {
+  function salvarCategoria(event: React.FormEvent) {
     event.preventDefault();
 
     if (nome.trim() === "") {
@@ -30,19 +31,14 @@ function Categorias() {
     }
 
     if (categoriaEditando !== null) {
+      const novaLista = [...categorias];
 
-      const novasCategorias = [...categorias];
+      novaLista[categoriaEditando] = nome;
 
-      novasCategorias[categoriaEditando] = nome;
-
-      setCategorias(novasCategorias);
-
+      setCategorias(novaLista);
       setCategoriaEditando(null);
-
     } else {
-
       setCategorias([...categorias, nome]);
-
     }
 
     setNome("");
@@ -54,91 +50,72 @@ function Categorias() {
   }
 
   function excluirCategoria(index: number) {
-    const novasCategorias = categorias.filter(
-      (_, i) => i !== index
-    );
+    const novaLista = categorias.filter((_, i) => i !== index);
 
-    setCategorias(novasCategorias);
+    setCategorias(novaLista);
   }
 
   return (
-    <div>
-
+    <div className={styles.container}>
       <h2>Categorias</h2>
+      <p className={styles.subtitulo}>
+        Cadastre e organize as categorias dos produtos
+      </p>
 
-      <h3>
-        {categoriaEditando !== null
-          ? "Editar categoria"
-          : "Cadastrar categoria"}
-      </h3>
+      <form onSubmit={salvarCategoria}>
+        <div>
+          <label>Nome da categoria</label>
 
-      <form onSubmit={cadastrarCategoria}>
-
-        <label>Nome da categoria</label>
-
-        <br />
-
-        <input
-          type="text"
-          value={nome}
-          onChange={(event) => setNome(event.target.value)}
-        />
-
-        <br />
-        <br />
+          <input
+            type="text"
+            value={nome}
+            onChange={(event) => setNome(event.target.value)}
+            placeholder="Digite o nome da categoria"
+          />
+        </div>
 
         <button type="submit">
           {categoriaEditando !== null
             ? "Salvar alteração"
             : "Cadastrar categoria"}
         </button>
-
       </form>
-
-      <hr />
 
       <h3>Categorias cadastradas</h3>
 
       <table>
-
         <thead>
           <tr>
-            <th>Código</th>
+            <th>#</th>
             <th>Categoria</th>
             <th>Ações</th>
           </tr>
         </thead>
 
         <tbody>
-
           {categorias.map((categoria, index) => (
-
             <tr key={index}>
-
               <td>{index + 1}</td>
-
               <td>{categoria}</td>
-
               <td>
-
-                <button onClick={() => editarCategoria(index)}>
-                  Editar
+                <button
+                  type="button"
+                  onClick={() => editarCategoria(index)}
+                >
+                  ✏️ Editar
                 </button>
 
-                <button onClick={() => excluirCategoria(index)}>
-                  Excluir
+                <button
+                  type="button"
+                  onClick={() => excluirCategoria(index)}
+                >
+                  🗑️ Excluir
                 </button>
-
               </td>
-
             </tr>
-
           ))}
-
         </tbody>
-
       </table>
-
     </div>
   );
 }

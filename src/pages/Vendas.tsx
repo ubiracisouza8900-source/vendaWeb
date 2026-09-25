@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+import styles from "./Vendas.module.css";
 
 interface ProdutoEstoque {
   produto: string;
@@ -16,212 +17,156 @@ interface Venda {
 }
 
 function Vendas() {
-
   const [estoque, setEstoque] = useState<ProdutoEstoque[]>(() => {
-    const estoqueSalvo = localStorage.getItem("estoque");
+    const dados = localStorage.getItem("estoque");
 
-    if (estoqueSalvo) {
-      return JSON.parse(estoqueSalvo);
+    if (dados) {
+      return JSON.parse(dados);
     }
 
     return [];
   });
 
   const [vendas, setVendas] = useState<Venda[]>(() => {
-    const vendasSalvas = localStorage.getItem("vendas");
+    const dados = localStorage.getItem("vendas");
 
-    if (vendasSalvas) {
-      return JSON.parse(vendasSalvas);
+    if (dados) {
+      return JSON.parse(dados);
     }
 
     return [];
   });
 
-  const [produtoSelecionado, setProdutoSelecionado] = useState("");
+  const [produto, setProduto] = useState("");
   const [quantidade, setQuantidade] = useState("");
   const [preco, setPreco] = useState("");
 
   useEffect(() => {
-    localStorage.setItem(
-      "estoque",
-      JSON.stringify(estoque)
-    );
+    localStorage.setItem("estoque", JSON.stringify(estoque));
   }, [estoque]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "vendas",
-      JSON.stringify(vendas)
-    );
+    localStorage.setItem("vendas", JSON.stringify(vendas));
   }, [vendas]);
 
-  function selecionarProduto(
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) {
-
-    const nomeProduto = event.target.value;
-
-    setProdutoSelecionado(nomeProduto);
-
-    const produtoEncontrado = estoque.find(
-      (item) => item.produto === nomeProduto
-    );
-
-    if (produtoEncontrado) {
-      setPreco("");
-    }
-  }
-
-  function registrarVenda() {
-
-    if (
-      produtoSelecionado === "" ||
-      quantidade === "" ||
-      preco === ""
-    ) {
-      return;
-    }
+  function realizarVenda(event: React.FormEvent) {
+    event.preventDefault();
 
     const quantidadeVenda = Number(quantidade);
-    const precoProduto = Number(preco);
+    const precoVenda = Number(preco);
 
-    if (
-      quantidadeVenda <= 0 ||
-      precoProduto <= 0
-    ) {
-      return;
-    }
-
-    const produtoEncontrado = estoque.find(
-      (item) => item.produto === produtoSelecionado
+    const produtoEstoque = estoque.find(
+      (item) => item.produto === produto
     );
 
-    if (!produtoEncontrado) {
+    if (!produtoEstoque) {
+      alert("Produto não encontrado no estoque.");
       return;
     }
 
-    const quantidadeEstoque =
-      Number(produtoEncontrado.quantidade);
+    const quantidadeEstoque = Number(produtoEstoque.quantidade);
+
+    if (quantidadeVenda <= 0) {
+      alert("Informe uma quantidade válida.");
+      return;
+    }
 
     if (quantidadeVenda > quantidadeEstoque) {
       alert("Quantidade maior que o estoque disponível.");
       return;
     }
 
-    const total = quantidadeVenda * precoProduto;
-
-    const novaVenda: Venda = {
-      produto: produtoSelecionado,
-      quantidade: quantidadeVenda,
-      preco: precoProduto,
-      total: total,
-      data: new Date().toLocaleString("pt-BR")
-    };
-
-    setVendas([...vendas, novaVenda]);
-
     const novoEstoque = estoque.map((item) => {
-
-      if (item.produto === produtoSelecionado) {
-
+      if (item.produto === produto) {
         return {
           ...item,
-          quantidade: String(
-            quantidadeEstoque - quantidadeVenda
-          )
+          quantidade: String(quantidadeEstoque - quantidadeVenda),
         };
       }
 
       return item;
     });
 
-    setEstoque(novoEstoque);
+    const novaVenda: Venda = {
+      produto,
+      quantidade: quantidadeVenda,
+      preco: precoVenda,
+      total: quantidadeVenda * precoVenda,
+      data: new Date().toLocaleString("pt-BR"),
+    };
 
-    setProdutoSelecionado("");
+    setEstoque(novoEstoque);
+    setVendas([...vendas, novaVenda]);
+
+    setProduto("");
     setQuantidade("");
     setPreco("");
   }
 
   function excluirVenda(index: number) {
+    const novaLista = vendas.filter((_, i) => i !== index);
 
-    const novasVendas = vendas.filter(
-      (_, i) => i !== index
-    );
-
-    setVendas(novasVendas);
+    setVendas(novaLista);
   }
 
   return (
-    <div>
+    <div className={styles.container}>
 
       <h2>Vendas</h2>
 
+      <p className={styles.subtitulo}>
+        Registre as vendas e acompanhe o histórico
+      </p>
+
       <h3>Registrar venda</h3>
 
-      <label>Produto</label>
+      <form onSubmit={realizarVenda}>
 
-      <br />
+        <div>
+          <label>Produto</label>
 
-      <select
-        value={produtoSelecionado}
-        onChange={selecionarProduto}
-      >
-        <option value="">
-          Selecione um produto
-        </option>
-
-        {estoque.map((item, index) => (
-
-          <option
-            key={index}
-            value={item.produto}
+          <select
+            value={produto}
+            onChange={(event) => setProduto(event.target.value)}
           >
-            {item.produto} - Estoque: {item.quantidade}
-          </option>
+            <option value="">Selecione um produto</option>
 
-        ))}
+            {estoque.map((item, index) => (
+              <option key={index} value={item.produto}>
+                {item.produto} - Estoque: {item.quantidade}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      </select>
+        <div>
+          <label>Quantidade</label>
 
-      <br />
-      <br />
+          <input
+            type="number"
+            value={quantidade}
+            onChange={(event) => setQuantidade(event.target.value)}
+            placeholder="0"
+          />
+        </div>
 
-      <label>Quantidade</label>
+        <div>
+          <label>Preço unitário</label>
 
-      <br />
+          <input
+            type="number"
+            step="0.01"
+            value={preco}
+            onChange={(event) => setPreco(event.target.value)}
+            placeholder="0,00"
+          />
+        </div>
 
-      <input
-        type="number"
-        value={quantidade}
-        onChange={(event) =>
-          setQuantidade(event.target.value)
-        }
-        placeholder="Quantidade"
-      />
+        <button type="submit">
+          💰 Realizar venda
+        </button>
 
-      <br />
-      <br />
-
-      <label>Preço unitário</label>
-
-      <br />
-
-      <input
-        type="number"
-        step="0.01"
-        value={preco}
-        onChange={(event) =>
-          setPreco(event.target.value)
-        }
-        placeholder="Preço"
-      />
-
-      <br />
-      <br />
-
-      <button onClick={registrarVenda}>
-        Registrar venda
-      </button>
+      </form>
 
       <hr />
 
@@ -230,26 +175,20 @@ function Vendas() {
       <table>
 
         <thead>
-
           <tr>
-            <th>Código</th>
             <th>Produto</th>
             <th>Quantidade</th>
             <th>Preço</th>
             <th>Total</th>
             <th>Data</th>
-            <th>Ações</th>
+            <th>Ação</th>
           </tr>
-
         </thead>
 
         <tbody>
 
           {vendas.map((venda, index) => (
-
             <tr key={index}>
-
-              <td>{index + 1}</td>
 
               <td>{venda.produto}</td>
 
@@ -266,17 +205,14 @@ function Vendas() {
               <td>{venda.data}</td>
 
               <td>
-
                 <button
                   onClick={() => excluirVenda(index)}
                 >
-                  Excluir
+                  🗑️ Excluir
                 </button>
-
               </td>
 
             </tr>
-
           ))}
 
         </tbody>

@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+import styles from "./Estoque.module.css";
 
 interface ProdutoEstoque {
   produto: string;
@@ -8,64 +9,48 @@ interface ProdutoEstoque {
 }
 
 function Estoque() {
-
   const [produto, setProduto] = useState("");
   const [categoria, setCategoria] = useState("");
   const [quantidade, setQuantidade] = useState("");
 
-  const [estoque, setEstoque] = useState<ProdutoEstoque[]>(() => {
+  const [produtos, setProdutos] = useState<ProdutoEstoque[]>(() => {
+    const dados = localStorage.getItem("estoque");
 
-    const estoqueSalvo = localStorage.getItem("estoque");
-
-    if (estoqueSalvo) {
-      return JSON.parse(estoqueSalvo);
+    if (dados) {
+      return JSON.parse(dados);
     }
 
     return [];
   });
 
-  const [produtoEditando, setProdutoEditando] =
-    useState<number | null>(null);
+  const [produtoEditando, setProdutoEditando] = useState<number | null>(null);
 
   useEffect(() => {
+    localStorage.setItem("estoque", JSON.stringify(produtos));
+  }, [produtos]);
 
-    localStorage.setItem(
-      "estoque",
-      JSON.stringify(estoque)
-    );
+  function cadastrarProduto(event: React.FormEvent) {
+    event.preventDefault();
 
-  }, [estoque]);
-
-  function cadastrarProduto() {
-
-    if (
-      produto.trim() === "" ||
-      categoria.trim() === "" ||
-      quantidade.trim() === ""
-    ) {
+    if (!produto || !categoria || !quantidade) {
       return;
     }
 
     const novoProduto: ProdutoEstoque = {
-      produto: produto,
-      categoria: categoria,
-      quantidade: quantidade
+      produto,
+      categoria,
+      quantidade,
     };
 
     if (produtoEditando !== null) {
+      const novaLista = [...produtos];
 
-      const novoEstoque = [...estoque];
+      novaLista[produtoEditando] = novoProduto;
 
-      novoEstoque[produtoEditando] = novoProduto;
-
-      setEstoque(novoEstoque);
-
+      setProdutos(novaLista);
       setProdutoEditando(null);
-
     } else {
-
-      setEstoque([...estoque, novoProduto]);
-
+      setProdutos([...produtos, novoProduto]);
     }
 
     setProduto("");
@@ -74,69 +59,74 @@ function Estoque() {
   }
 
   function editarProduto(index: number) {
+    const item = produtos[index];
 
-    setProduto(estoque[index].produto);
-    setCategoria(estoque[index].categoria);
-    setQuantidade(estoque[index].quantidade);
+    setProduto(item.produto);
+    setCategoria(item.categoria);
+    setQuantidade(item.quantidade);
 
     setProdutoEditando(index);
   }
 
   function excluirProduto(index: number) {
+    const novaLista = produtos.filter((_, i) => i !== index);
 
-    const novoEstoque = estoque.filter(
-      (_, i) => i !== index
-    );
-
-    setEstoque(novoEstoque);
+    setProdutos(novaLista);
   }
 
   return (
-    <div>
+    <div className={styles.container}>
 
       <h2>Estoque</h2>
 
-      <h3>
-        {produtoEditando !== null
-          ? "Editar produto"
-          : "Cadastrar produto no estoque"}
-      </h3>
+      <p className={styles.subtitulo}>
+        Controle os produtos disponíveis no estoque
+      </p>
 
-      <input
-        type="text"
-        placeholder="Produto"
-        value={produto}
-        onChange={(event) => setProduto(event.target.value)}
-      />
+      <h3>Adicionar produto ao estoque</h3>
 
-      <br />
-      <br />
+      <form onSubmit={cadastrarProduto}>
 
-      <input
-        type="text"
-        placeholder="Categoria"
-        value={categoria}
-        onChange={(event) => setCategoria(event.target.value)}
-      />
+        <div>
+          <label>Produto</label>
 
-      <br />
-      <br />
+          <input
+            type="text"
+            value={produto}
+            onChange={(event) => setProduto(event.target.value)}
+            placeholder="Nome do produto"
+          />
+        </div>
 
-      <input
-        type="number"
-        placeholder="Quantidade"
-        value={quantidade}
-        onChange={(event) => setQuantidade(event.target.value)}
-      />
+        <div>
+          <label>Categoria</label>
 
-      <br />
-      <br />
+          <input
+            type="text"
+            value={categoria}
+            onChange={(event) => setCategoria(event.target.value)}
+            placeholder="Categoria"
+          />
+        </div>
 
-      <button onClick={cadastrarProduto}>
-        {produtoEditando !== null
-          ? "Salvar alteração"
-          : "Cadastrar"}
-      </button>
+        <div>
+          <label>Quantidade</label>
+
+          <input
+            type="number"
+            value={quantidade}
+            onChange={(event) => setQuantidade(event.target.value)}
+            placeholder="0"
+          />
+        </div>
+
+        <button type="submit">
+          {produtoEditando !== null
+            ? "Salvar alteração"
+            : "Adicionar ao estoque"}
+        </button>
+
+      </form>
 
       <hr />
 
@@ -146,7 +136,6 @@ function Estoque() {
 
         <thead>
           <tr>
-            <th>Código</th>
             <th>Produto</th>
             <th>Categoria</th>
             <th>Quantidade</th>
@@ -156,11 +145,9 @@ function Estoque() {
 
         <tbody>
 
-          {estoque.map((item, index) => (
+          {produtos.map((item, index) => (
 
             <tr key={index}>
-
-              <td>{index + 1}</td>
 
               <td>{item.produto}</td>
 
@@ -173,13 +160,13 @@ function Estoque() {
                 <button
                   onClick={() => editarProduto(index)}
                 >
-                  Editar
+                  ✏️ Editar
                 </button>
 
                 <button
                   onClick={() => excluirProduto(index)}
                 >
-                  Excluir
+                  🗑️ Excluir
                 </button>
 
               </td>
@@ -197,4 +184,3 @@ function Estoque() {
 }
 
 export default Estoque;
-

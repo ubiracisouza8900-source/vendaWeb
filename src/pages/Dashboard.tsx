@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import styles from "./Dashboard.module.css";
 
 interface Produto {
   produto: string;
@@ -12,7 +13,6 @@ interface Venda {
 }
 
 function Dashboard() {
-
   const [produtos] = useState<Produto[]>(() => {
     const dados = localStorage.getItem("estoque");
 
@@ -46,28 +46,59 @@ function Dashboard() {
   );
 
   return (
-    <div>
+    <div className={styles.container}>
 
-      <h2>Dashboard</h2>
+      <div className={styles.cabecalho}>
+        <h2 className={styles.titulo}>Dashboard</h2>
 
-      <p>Resumo do supermercado</p>
+        <p className={styles.subtitulo}>
+          Visão geral do seu supermercado
+        </p>
+      </div>
 
-      <hr />
+      <div className={styles.cards}>
 
-      <h3>🛒 Produtos</h3>
-      <p>{produtos.length}</p>
+        <div className={styles.card}>
+          <span className={styles.icone}>🛒</span>
 
-      <h3>📦 Quantidade em estoque</h3>
-      <p>{totalEstoque}</p>
+          <div>
+            <p className={styles.label}>Produtos</p>
+            <h3>{produtos.length}</h3>
+          </div>
+        </div>
 
-      <h3>💰 Vendas realizadas</h3>
-      <p>{totalVendas}</p>
+        <div className={styles.card}>
+          <span className={styles.icone}>📦</span>
 
-      <h3>💵 Valor total vendido</h3>
-      <p>R$ {valorVendas.toFixed(2)}</p>
+          <div>
+            <p className={styles.label}>Estoque</p>
+            <h3>{totalEstoque}</h3>
+          </div>
+        </div>
+
+        <div className={styles.card}>
+          <span className={styles.icone}>🧾</span>
+
+          <div>
+            <p className={styles.label}>Vendas</p>
+            <h3>{totalVendas}</h3>
+          </div>
+        </div>
+
+        <div className={styles.card}>
+          <span className={styles.icone}>💰</span>
+
+          <div>
+            <p className={styles.label}>Valor vendido</p>
+            <h3>R$ {valorVendas.toFixed(2)}</h3>
+          </div>
+        </div>
+
+      </div>
 
     </div>
   );
 }
 
 export default Dashboard;
+

@@ -1,57 +1,63 @@
 
 import { useState, useEffect } from "react";
+import styles from "./Produtos.module.css";
+
+interface Produto {
+  id: number;
+  nome: string;
+  codigo: string;
+  categoria: string;
+  preco: string;
+  quantidade: string;
+}
 
 function Produtos() {
-
   const [nome, setNome] = useState("");
   const [codigo, setCodigo] = useState("");
   const [categoria, setCategoria] = useState("");
   const [preco, setPreco] = useState("");
   const [quantidade, setQuantidade] = useState("");
 
-  const [produtos, setProdutos] = useState<any[]> (()=>{
-
+  const [produtos, setProdutos] = useState<Produto[]>(() => {
     const produtosSalvos = localStorage.getItem("produtos");
 
     if (produtosSalvos) {
       return JSON.parse(produtosSalvos);
     }
-    return[]
 
+    return [];
   });
+
+  const [produtoEditando, setProdutoEditando] = useState<number | null>(null);
 
   useEffect(() => {
     localStorage.setItem("produtos", JSON.stringify(produtos));
   }, [produtos]);
 
-
-  const [produtoEditando, setProdutoEditando] = useState<number | null>(null);
-
   function cadastrarProduto(event: React.FormEvent) {
     event.preventDefault();
 
-    const novoProduto = {
+    const novoProduto: Produto = {
+      id:
+        produtoEditando !== null
+          ? produtos[produtoEditando].id
+          : Date.now(),
       nome,
       codigo,
       categoria,
       preco,
-      quantidade
+      quantidade,
     };
 
     if (produtoEditando !== null) {
-
       const novaLista = [...produtos];
 
       novaLista[produtoEditando] = novoProduto;
 
       setProdutos(novaLista);
-
       setProdutoEditando(null);
-
     } else {
-
       setProdutos([...produtos, novoProduto]);
-
     }
 
     setNome("");
@@ -60,8 +66,9 @@ function Produtos() {
     setPreco("");
     setQuantidade("");
   }
+
   function excluirProduto(index: number) {
-    const novaLista = produtos.filter    ((_, i) => i !== index);
+    const novaLista = produtos.filter((_, i) => i !== index);
 
     setProdutos(novaLista);
   }
@@ -78,10 +85,9 @@ function Produtos() {
     setProdutoEditando(index);
   }
 
-
-
   return (
-    <div>
+    <div className={styles.container}>
+
       <h2>Produtos</h2>
 
       <h3>Cadastrar produto</h3>
@@ -90,69 +96,66 @@ function Produtos() {
 
         <div>
           <label>Nome do produto</label>
-          <br />
+
           <input
             type="text"
             value={nome}
             onChange={(event) => setNome(event.target.value)}
+            placeholder="Digite o nome"
           />
         </div>
 
-        <br />
-
         <div>
           <label>Código de barras</label>
-          <br />
+
           <input
             type="text"
             value={codigo}
             onChange={(event) => setCodigo(event.target.value)}
+            placeholder="Digite o código"
           />
         </div>
 
-        <br />
-
         <div>
           <label>Categoria</label>
-          <br />
+
           <input
             type="text"
             value={categoria}
             onChange={(event) => setCategoria(event.target.value)}
+            placeholder="Digite a categoria"
           />
         </div>
-
-        <br />
 
         <div>
           <label>Preço</label>
-          <br />
+
           <input
             type="number"
+            step="0.01"
             value={preco}
             onChange={(event) => setPreco(event.target.value)}
+            placeholder="0,00"
           />
         </div>
 
-        <br />
-
         <div>
           <label>Quantidade</label>
-          <br />
+
           <input
             type="number"
             value={quantidade}
             onChange={(event) => setQuantidade(event.target.value)}
+            placeholder="0"
           />
         </div>
-
-        <br />
 
         <button type="submit">
           {produtoEditando !== null
             ? "Salvar alteração"
             : "Cadastrar produto"}
         </button>
+
       </form>
 
       <hr />
@@ -160,6 +163,7 @@ function Produtos() {
       <h3>Produtos cadastrados</h3>
 
       <table>
+
         <thead>
           <tr>
             <th>Código</th>
@@ -172,30 +176,43 @@ function Produtos() {
         </thead>
 
         <tbody>
+
           {produtos.map((produto, index) => (
-            <tr key={index}>
+
+            <tr key={produto.id}>
+
               <td>{produto.codigo}</td>
+
               <td>{produto.nome}</td>
+
               <td>{produto.categoria}</td>
+
               <td>R$ {produto.preco}</td>
+
               <td>{produto.quantidade}</td>
 
               <td>
-                <td>
-                  <button onClick={() => editarProduto(index)}>
-                    ✏️ Editar
-                  </button>
 
-                  <button onClick={() => excluirProduto(index)}>
-                    🗑️ Excluir
-                  </button>
-                </td>
+                <button
+                  onClick={() => editarProduto(index)}
+                >
+                  ✏️ Editar
+                </button>
+
+                <button
+                  onClick={() => excluirProduto(index)}
+                >
+                  🗑️ Excluir
+                </button>
+
               </td>
+
             </tr>
 
-
           ))}
+
         </tbody>
+
       </table>
 
     </div>

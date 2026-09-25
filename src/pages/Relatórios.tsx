@@ -1,5 +1,5 @@
-
 import { useState } from "react";
+import styles from "./Relatorios.module.css";
 
 interface Venda {
   produto: string;
@@ -10,13 +10,11 @@ interface Venda {
 }
 
 function Relatorios() {
-
   const [vendas] = useState<Venda[]>(() => {
+    const dados = localStorage.getItem("vendas");
 
-    const vendasSalvas = localStorage.getItem("vendas");
-
-    if (vendasSalvas) {
-      return JSON.parse(vendasSalvas);
+    if (dados) {
+      return JSON.parse(dados);
     }
 
     return [];
@@ -29,76 +27,75 @@ function Relatorios() {
     0
   );
 
-  const produtosVendidos = vendas.reduce(
+  const quantidadeProdutos = vendas.reduce(
     (total, venda) => total + venda.quantidade,
     0
   );
 
   return (
-    <div>
+    <div className={styles.container}>
+      <div className={styles.cabecalho}>
+        <h2>Relatórios</h2>
+        <p>Resumo das vendas realizadas</p>
+      </div>
 
-      <h2>Relatórios</h2>
+      <div className={styles.cards}>
+        <div className={styles.card}>
+          <span>🧾</span>
+          <div>
+            <p>Total de vendas</p>
+            <h3>{totalVendas}</h3>
+          </div>
+        </div>
 
-      <p>Resumo das vendas</p>
+        <div className={styles.card}>
+          <span>📦</span>
+          <div>
+            <p>Produtos vendidos</p>
+            <h3>{quantidadeProdutos}</h3>
+          </div>
+        </div>
 
-      <hr />
+        <div className={styles.card}>
+          <span>💰</span>
+          <div>
+            <p>Valor total</p>
+            <h3>R$ {valorTotal.toFixed(2)}</h3>
+          </div>
+        </div>
+      </div>
 
-      <h3>💰 Total de vendas</h3>
-      <p>{totalVendas}</p>
+      <h3 className={styles.tituloTabela}>Histórico de vendas</h3>
 
-      <h3>💵 Valor total vendido</h3>
-      <p>R$ {valorTotal.toFixed(2)}</p>
-
-      <h3>📦 Produtos vendidos</h3>
-      <p>{produtosVendidos}</p>
-
-      <hr />
-
-      <h3>Histórico de vendas</h3>
-
-      <table>
-
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Produto</th>
-            <th>Quantidade</th>
-            <th>Preço</th>
-            <th>Total</th>
-            <th>Data</th>
-          </tr>
-        </thead>
-
-        <tbody>
-
-          {vendas.map((venda, index) => (
-
-            <tr key={index}>
-
-              <td>{index + 1}</td>
-
-              <td>{venda.produto}</td>
-
-              <td>{venda.quantidade}</td>
-
-              <td>
-                R$ {venda.preco.toFixed(2)}
-              </td>
-
-              <td>
-                R$ {venda.total.toFixed(2)}
-              </td>
-
-              <td>{venda.data}</td>
-
+      {vendas.length === 0 ? (
+        <div className={styles.vazio}>
+          <p>Nenhuma venda registrada.</p>
+        </div>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Quantidade</th>
+              <th>Preço</th>
+              <th>Total</th>
+              <th>Data</th>
             </tr>
+          </thead>
 
-          ))}
-
-        </tbody>
-
-      </table>
-
+          <tbody>
+            {vendas.map((venda, index) => (
+              <tr key={index}>
+                <td>{venda.produto}</td>
+                <td>{venda.quantidade}</td>
+                <td>R$ {venda.preco.toFixed(2)}</td>
+                <td>R$ {venda.total.toFixed(2)}</td>
+                <td>{venda.data}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

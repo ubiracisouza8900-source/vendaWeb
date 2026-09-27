@@ -1,186 +1,159 @@
-
 import { useEffect, useState } from "react";
 import styles from "./Estoque.module.css";
 
-interface ProdutoEstoque {
-  produto: string;
-  categoria: string;
-  quantidade: string;
+interface Produto {
+id: number;
+nome: string;
+codigo: string;
+categoria: string;
+preco: string;
+quantidade: string;
 }
 
 function Estoque() {
-  const [produto, setProduto] = useState("");
-  const [categoria, setCategoria] = useState("");
-  const [quantidade, setQuantidade] = useState("");
+const [produtos, setProdutos] = useState<Produto[]>([]);
 
-  const [produtos, setProdutos] = useState<ProdutoEstoque[]>(() => {
-    const dados = localStorage.getItem("estoque");
+const [pesquisa, setPesquisa] = useState("");
+const [termoPesquisa, setTermoPesquisa] = useState("");
 
-    if (dados) {
-      return JSON.parse(dados);
-    }
+// Carrega os mesmos produtos cadastrados na tela Produtos
+useEffect(() => {
+function carregarProdutos() {
+const produtosSalvos = localStorage.getItem("produtos");
 
-    return [];
-  });
-
-  const [produtoEditando, setProdutoEditando] = useState<number | null>(null);
-
-  useEffect(() => {
-    localStorage.setItem("estoque", JSON.stringify(produtos));
-  }, [produtos]);
-
-  function cadastrarProduto(event: React.FormEvent) {
-    event.preventDefault();
-
-    if (!produto || !categoria || !quantidade) {
-      return;
-    }
-
-    const novoProduto: ProdutoEstoque = {
-      produto,
-      categoria,
-      quantidade,
-    };
-
-    if (produtoEditando !== null) {
-      const novaLista = [...produtos];
-
-      novaLista[produtoEditando] = novoProduto;
-
-      setProdutos(novaLista);
-      setProdutoEditando(null);
-    } else {
-      setProdutos([...produtos, novoProduto]);
-    }
-
-    setProduto("");
-    setCategoria("");
-    setQuantidade("");
+  if (produtosSalvos) {
+    setProdutos(JSON.parse(produtosSalvos));
+  } else {
+    setProdutos([]);
   }
+}
 
-  function editarProduto(index: number) {
-    const item = produtos[index];
+carregarProdutos();
 
-    setProduto(item.produto);
-    setCategoria(item.categoria);
-    setQuantidade(item.quantidade);
+// Atualiza o estoque quando houver mudança nos produtos
+window.addEventListener("storage", carregarProdutos);
 
-    setProdutoEditando(index);
-  }
+return () => {
+  window.removeEventListener("storage", carregarProdutos);
+};
 
-  function excluirProduto(index: number) {
-    const novaLista = produtos.filter((_, i) => i !== index);
+}, []);
 
-    setProdutos(novaLista);
-  }
+// Pesquisa por nome, código ou categoria
+function pesquisarProduto(event: React.FormEvent) {
+event.preventDefault();
 
-  return (
-    <div className={styles.container}>
+setTermoPesquisa(pesquisa.trim().toLowerCase());
 
-      <h2>Estoque</h2>
+}
 
-      <p className={styles.subtitulo}>
-        Controle os produtos disponíveis no estoque
-      </p>
+function limparPesquisa() {
+setPesquisa("");
+setTermoPesquisa("");
+}
 
-      <h3>Adicionar produto ao estoque</h3>
+const produtosFiltrados = produtos.filter((produto) => {
+return (
+produto.nome.toLowerCase().includes(termoPesquisa) ||
+produto.codigo.toLowerCase().includes(termoPesquisa) ||
+produto.categoria.toLowerCase().includes(termoPesquisa)
+);
+});
 
-      <form onSubmit={cadastrarProduto}>
+return (
+<div className={styles.container}>
 
-        <div>
-          <label>Produto</label>
+  <h2>Estoque</h2>
 
-          <input
-            type="text"
-            value={produto}
-            onChange={(event) => setProduto(event.target.value)}
-            placeholder="Nome do produto"
-          />
-        </div>
+  <p className={styles.subtitulo}>
+    Controle os produtos disponíveis no estoque
+  </p>
 
-        <div>
-          <label>Categoria</label>
+  <h3>Pesquisar produto</h3>
 
-          <input
-            type="text"
-            value={categoria}
-            onChange={(event) => setCategoria(event.target.value)}
-            placeholder="Categoria"
-          />
-        </div>
+  <form onSubmit={pesquisarProduto}>
 
-        <div>
-          <label>Quantidade</label>
+    <input
+      type="search"
+      value={pesquisa}
+      onChange={(event) => setPesquisa(event.target.value)}
+      placeholder="Digite nome, código ou categoria"
+    />
 
-          <input
-            type="number"
-            value={quantidade}
-            onChange={(event) => setQuantidade(event.target.value)}
-            placeholder="0"
-          />
-        </div>
+    <button type="submit">
+      🔎 Pesquisar
+    </button>
 
-        <button type="submit">
-          {produtoEditando !== null
-            ? "Salvar alteração"
-            : "Adicionar ao estoque"}
-        </button>
+    <button
+      type="button"
+      onClick={limparPesquisa}
+    >
+      Limpar
+    </button>
 
-      </form>
+  </form>
 
-      <hr />
+  <hr />
 
-      <h3>Produtos em estoque</h3>
+  <h3>Produtos em estoque</h3>
 
-      <table>
+  <p>
+    Produtos encontrados: {produtosFiltrados.length}
+  </p>
 
-        <thead>
-          <tr>
-            <th>Produto</th>
-            <th>Categoria</th>
-            <th>Quantidade</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
+  <table>
 
-        <tbody>
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Produto</th>
+        <th>Categoria</th>
+        <th>Preço</th>
+        <th>Quantidade</th>
+      </tr>
+    </thead>
 
-          {produtos.map((item, index) => (
+    <tbody>
 
-            <tr key={index}>
+      {produtosFiltrados.map((produto) => (
 
-              <td>{item.produto}</td>
+        <tr key={produto.id}>
 
-              <td>{item.categoria}</td>
+          <td>{produto.codigo}</td>
 
-              <td>{item.quantidade}</td>
+          <td>{produto.nome}</td>
 
-              <td>
+          <td>{produto.categoria}</td>
 
-                <button
-                  onClick={() => editarProduto(index)}
-                >
-                  ✏️ Editar
-                </button>
+          <td>
+            R$ {produto.preco}
+          </td>
 
-                <button
-                  onClick={() => excluirProduto(index)}
-                >
-                  🗑️ Excluir
-                </button>
+          <td>
+            {produto.quantidade}
+          </td>
 
-              </td>
+        </tr>
 
-            </tr>
+      ))}
 
-          ))}
+      {produtosFiltrados.length === 0 && (
 
-        </tbody>
+        <tr>
+          <td colSpan={5}>
+            Nenhum produto encontrado.
+          </td>
+        </tr>
 
-      </table>
+      )}
 
-    </div>
-  );
+    </tbody>
+
+  </table>
+
+</div>
+
+);
 }
 
 export default Estoque;

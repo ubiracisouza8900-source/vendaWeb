@@ -1,24 +1,36 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./Vendas.module.css";
 
-interface ProdutoEstoque {
-  produto: string;
+interface Produto {
+  id: number;
+  nome: string;
+  codigo: string;
   categoria: string;
+  preco: string;
   quantidade: string;
 }
 
-interface Venda {
-  produto: string;
-  quantidade: number;
+interface ItemVenda {
+  produtoId: number;
+  nome: string;
+  codigo: string;
   preco: number;
+  quantidade: number;
+  total: number;
+}
+
+interface Venda {
+  id: number;
+  itens: ItemVenda[];
   total: number;
   data: string;
 }
 
 function Vendas() {
-  const [estoque, setEstoque] = useState<ProdutoEstoque[]>(() => {
-    const dados = localStorage.getItem("estoque");
+  const campoCodigo = useRef<HTMLInputElement>(null);
+
+  const [produtos, setProdutos] = useState<Produto[]>(() => {
+    const dados = localStorage.getItem("produtos");
 
     if (dados) {
       return JSON.parse(dados);
@@ -31,193 +43,685 @@ function Vendas() {
     const dados = localStorage.getItem("vendas");
 
     if (dados) {
-      return JSON.parse(dados);
+      try {
+        const vendasSalvas = JSON.parse(dados);
+
+        // Verifica se os dados antigos estão no formato correto
+        if (
+          Array.isArray(vendasSalvas) &&
+          vendasSalvas.every((venda) => Array.isArray(venda.itens))
+        ) {
+          return vendasSalvas;
+        }
+      } catch {
+        return [];
+      }
     }
 
     return [];
   });
 
-  const [produto, setProduto] = useState("");
-  const [quantidade, setQuantidade] = useState("");
-  const [preco, setPreco] = useState("");
+  const [carrinho, setCarrinho] = useState<ItemVenda[]>([]);
+  const [codigo, setCodigo] = useState("");
+  const [comprovante, setComprovante] = useState<Venda | null>(null);
 
   useEffect(() => {
-    localStorage.setItem("estoque", JSON.stringify(estoque));
-  }, [estoque]);
+    localStorage.setItem(
+      "produtos",
+      JSON.stringify(produtos)
+    );
+  }, [produtos]);
 
   useEffect(() => {
-    localStorage.setItem("vendas", JSON.stringify(vendas));
+    localStorage.setItem(
+      "vendas",
+      JSON.stringify(vendas)
+    );
   }, [vendas]);
 
-  function realizarVenda(event: React.FormEvent) {
+  function lerCodigoBarras(
+    event: React.KeyboardEvent<HTMLInputElement>
+  ) {
+    if (event.key !== "Enter") {
+      return;
+    }
+
     event.preventDefault();
 
-    const quantidadeVenda = Number(quantidade);
-    const precoVenda = Number(preco);
+    const codigoLido = codigo.trim();
 
-    const produtoEstoque = estoque.find(
-      (item) => item.produto === produto
+    if (!codigoLido) {
+      return;
+    }
+
+    const produto = produtos.find(
+      (item) => item.codigo === codigoLido
     );
 
-    if (!produtoEstoque) {
-      alert("Produto não encontrado no estoque.");
+    if (!produto) {
+      alert("Produto não encontrado.");
+      setCodigo("");
+      campoCodigo.current?.focus();
       return;
     }
 
-    const quantidadeEstoque = Number(produtoEstoque.quantidade);
+    adicionarProduto(produto);
 
-    if (quantidadeVenda <= 0) {
-      alert("Informe uma quantidade válida.");
+    setCodigo("");
+
+    campoCodigo.current?.focus();
+  }
+
+  function adicionarProduto(produto: Produto) {
+    const estoqueDisponivel = Number(
+      produto.quantidade
+    );
+
+    const itemExistente = carrinho.find(
+      (item) => item.produtoId === produto.id
+    );
+
+    const quantidadeNoCarrinho = itemExistente
+      ? itemExistente.quantidade
+      : 0;
+
+    if (quantidadeNoCarrinho >= estoqueDisponivel) {
+      alert(
+        `Não há mais unidades de ${produto.nome} no estoque.`
+      );
       return;
     }
 
-    if (quantidadeVenda > quantidadeEstoque) {
-      alert("Quantidade maior que o estoque disponível.");
+    const preco = Number(
+      String(produto.preco).replace(",", ".")
+    );
+
+    if (itemExistente) {
+      const novoCarrinho = carrinho.map((item) => {
+        if (item.produtoId === produto.id) {
+          const novaQuantidade =
+            item.quantidade + 1;
+
+          return {
+            ...item,
+            quantidade: novaQuantidade,
+            total: novaQuantidade * item.preco,
+          };
+        }
+
+        return item;
+      });
+
+      setCarrinho(novoCarrinho);
+
       return;
     }
 
-    const novoEstoque = estoque.map((item) => {
-      if (item.produto === produto) {
-        return {
-          ...item,
-          quantidade: String(quantidadeEstoque - quantidadeVenda),
-        };
-      }
-
-      return item;
-    });
-
-    const novaVenda: Venda = {
-      produto,
-      quantidade: quantidadeVenda,
-      preco: precoVenda,
-      total: quantidadeVenda * precoVenda,
-      data: new Date().toLocaleString("pt-BR"),
+    const novoItem: ItemVenda = {
+      produtoId: produto.id,
+      nome: produto.nome,
+      codigo: produto.codigo,
+      preco,
+      quantidade: 1,
+      total: preco,
     };
 
-    setEstoque(novoEstoque);
-    setVendas([...vendas, novaVenda]);
-
-    setProduto("");
-    setQuantidade("");
-    setPreco("");
+    setCarrinho([
+      ...carrinho,
+      novoItem,
+    ]);
   }
 
-  function excluirVenda(index: number) {
-    const novaLista = vendas.filter((_, i) => i !== index);
+  function aumentarQuantidade(
+    item: ItemVenda
+  ) {
+    const produto = produtos.find(
+      (produto) =>
+        produto.id === item.produtoId
+    );
 
-    setVendas(novaLista);
+    if (!produto) {
+      return;
+    }
+
+    if (
+      item.quantidade >=
+      Number(produto.quantidade)
+    ) {
+      alert(
+        "Não há mais unidades no estoque."
+      );
+      return;
+    }
+
+    const novoCarrinho = carrinho.map(
+      (itemCarrinho) => {
+        if (
+          itemCarrinho.produtoId ===
+          item.produtoId
+        ) {
+          const novaQuantidade =
+            itemCarrinho.quantidade + 1;
+
+          return {
+            ...itemCarrinho,
+            quantidade: novaQuantidade,
+            total:
+              novaQuantidade *
+              itemCarrinho.preco,
+          };
+        }
+
+        return itemCarrinho;
+      }
+    );
+
+    setCarrinho(novoCarrinho);
   }
+
+  function diminuirQuantidade(
+    item: ItemVenda
+  ) {
+    if (item.quantidade === 1) {
+      removerProduto(item.produtoId);
+      return;
+    }
+
+    const novoCarrinho = carrinho.map(
+      (itemCarrinho) => {
+        if (
+          itemCarrinho.produtoId ===
+          item.produtoId
+        ) {
+          const novaQuantidade =
+            itemCarrinho.quantidade - 1;
+
+          return {
+            ...itemCarrinho,
+            quantidade: novaQuantidade,
+            total:
+              novaQuantidade *
+              itemCarrinho.preco,
+          };
+        }
+
+        return itemCarrinho;
+      }
+    );
+
+    setCarrinho(novoCarrinho);
+  }
+
+  function removerProduto(
+    produtoId: number
+  ) {
+    const novoCarrinho =
+      carrinho.filter(
+        (item) =>
+          item.produtoId !== produtoId
+      );
+
+    setCarrinho(novoCarrinho);
+
+    setTimeout(() => {
+      campoCodigo.current?.focus();
+    }, 100);
+  }
+
+  function finalizarVenda() {
+    if (carrinho.length === 0) {
+      alert(
+        "Nenhum produto foi adicionado à venda."
+      );
+      return;
+    }
+
+    const total = carrinho.reduce(
+      (soma, item) =>
+        soma + item.total,
+      0
+    );
+
+    const novoId =
+      vendas.length > 0
+        ? Math.max(
+            ...vendas.map(
+              (venda) => venda.id
+            )
+          ) + 1
+        : 1;
+
+    const novaVenda: Venda = {
+      id: novoId,
+      itens: [...carrinho],
+      total,
+      data: new Date().toLocaleString(
+        "pt-BR"
+      ),
+    };
+
+    const novosProdutos =
+      produtos.map((produto) => {
+        const itemVenda =
+          carrinho.find(
+            (item) =>
+              item.produtoId ===
+              produto.id
+          );
+
+        if (!itemVenda) {
+          return produto;
+        }
+
+        const novoEstoque =
+          Number(produto.quantidade) -
+          itemVenda.quantidade;
+
+        return {
+          ...produto,
+          quantidade:
+            String(novoEstoque),
+        };
+      });
+
+    setProdutos(novosProdutos);
+
+    setVendas([
+      ...vendas,
+      novaVenda,
+    ]);
+
+    setComprovante(novaVenda);
+
+    setCarrinho([]);
+
+    setCodigo("");
+  }
+
+  function novaVenda() {
+    setComprovante(null);
+    setCarrinho([]);
+    setCodigo("");
+
+    setTimeout(() => {
+      campoCodigo.current?.focus();
+    }, 100);
+  }
+
+  function imprimirComprovante() {
+    window.print();
+  }
+
+  const totalCarrinho =
+    carrinho.reduce(
+      (total, item) =>
+        total + item.total,
+      0
+    );
 
   return (
     <div className={styles.container}>
 
-      <h2>Vendas</h2>
+      {!comprovante && (
+        <>
+          <h2>PDV - Vendas</h2>
 
-      <p className={styles.subtitulo}>
-        Registre as vendas e acompanhe o histórico
-      </p>
+          <p className={styles.subtitulo}>
+            Passe o código de barras no leitor
+          </p>
 
-      <h3>Registrar venda</h3>
+          <div>
+            <label>
+              Código de barras
+            </label>
 
-      <form onSubmit={realizarVenda}>
+            <input
+              ref={campoCodigo}
+              type="text"
+              value={codigo}
+              onChange={(event) =>
+                setCodigo(
+                  event.target.value
+                )
+              }
+              onKeyDown={
+                lerCodigoBarras
+              }
+              placeholder="Bipe o código de barras"
+              autoFocus
+              autoComplete="off"
+            />
+          </div>
 
-        <div>
-          <label>Produto</label>
+          <hr />
 
-          <select
-            value={produto}
-            onChange={(event) => setProduto(event.target.value)}
+          <h3>
+            Produtos da venda
+          </h3>
+
+          {carrinho.length === 0 ? (
+            <p>
+              Aguardando leitura do
+              código de barras...
+            </p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>
+                    Produto
+                  </th>
+
+                  <th>
+                    Quantidade
+                  </th>
+
+                  <th>
+                    Preço
+                  </th>
+
+                  <th>
+                    Total
+                  </th>
+
+                  <th>
+                    Ação
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {carrinho.map(
+                  (item) => (
+                    <tr
+                      key={
+                        item.produtoId
+                      }
+                    >
+                      <td>
+                        {item.nome}
+                      </td>
+
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            diminuirQuantidade(
+                              item
+                            )
+                          }
+                        >
+                          -
+                        </button>
+
+                        {" "}
+
+                        {item.quantidade}
+
+                        {" "}
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            aumentarQuantidade(
+                              item
+                            )
+                          }
+                        >
+                          +
+                        </button>
+                      </td>
+
+                      <td>
+                        R${" "}
+                        {item.preco.toFixed(
+                          2
+                        )}
+                      </td>
+
+                      <td>
+                        R${" "}
+                        {item.total.toFixed(
+                          2
+                        )}
+                      </td>
+
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removerProduto(
+                              item.produtoId
+                            )
+                          }
+                        >
+                          🗑️
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          )}
+
+          <hr />
+
+          <h2>
+            TOTAL:{" "}
+            {totalCarrinho.toLocaleString(
+              "pt-BR",
+              {
+                style: "currency",
+                currency: "BRL",
+              }
+            )}
+          </h2>
+
+          <button
+            type="button"
+            onClick={
+              finalizarVenda
+            }
+            disabled={
+              carrinho.length === 0
+            }
           >
-            <option value="">Selecione um produto</option>
+            💰 Finalizar venda
+          </button>
 
-            {estoque.map((item, index) => (
-              <option key={index} value={item.produto}>
-                {item.produto} - Estoque: {item.quantidade}
-              </option>
-            ))}
-          </select>
+          <hr />
+
+          <h3>
+            Histórico de vendas
+          </h3>
+
+          {vendas.length === 0 ? (
+            <p>
+              Nenhuma venda realizada.
+            </p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>
+                    Venda
+                  </th>
+
+                  <th>
+                    Produtos
+                  </th>
+
+                  <th>
+                    Total
+                  </th>
+
+                  <th>
+                    Data
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {vendas.map(
+                  (venda) => (
+                    <tr
+                      key={
+                        venda.id
+                      }
+                    >
+                      <td>
+                        #
+                        {String(
+                          venda.id
+                        ).padStart(
+                          4,
+                          "0"
+                        )}
+                      </td>
+
+                      <td>
+                        {venda.itens.reduce(
+                          (
+                            total,
+                            item
+                          ) =>
+                            total +
+                            item.quantidade,
+                          0
+                        )}
+                      </td>
+
+                      <td>
+                        R${" "}
+                        {venda.total.toFixed(
+                          2
+                        )}
+                      </td>
+
+                      <td>
+                        {venda.data}
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          )}
+        </>
+      )}
+
+      {comprovante && (
+        <div className={styles.comprovante}>
+
+          <h2>
+            COMPROVANTE DE VENDA
+          </h2>
+
+          <p>
+            Venda #
+            {String(
+              comprovante.id
+            ).padStart(4, "0")}
+          </p>
+
+          <p>
+            {comprovante.data}
+          </p>
+
+          <hr />
+
+          <table>
+            <thead>
+              <tr>
+                <th>
+                  Produto
+                </th>
+
+                <th>
+                  Qtd.
+                </th>
+
+                <th>
+                  Preço
+                </th>
+
+                <th>
+                  Total
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {comprovante.itens.map(
+                (item) => (
+                  <tr
+                    key={
+                      item.produtoId
+                    }
+                  >
+                    <td>
+                      {item.nome}
+                    </td>
+
+                    <td>
+                      {item.quantidade}
+                    </td>
+
+                    <td>
+                      R${" "}
+                      {item.preco.toFixed(
+                        2
+                      )}
+                    </td>
+
+                    <td>
+                      R${" "}
+                      {item.total.toFixed(
+                        2
+                      )}
+                    </td>
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
+
+          <hr />
+
+          <h2>
+            TOTAL:{" "}
+            {comprovante.total.toLocaleString(
+              "pt-BR",
+              {
+                style: "currency",
+                currency: "BRL",
+              }
+            )}
+          </h2>
+
+          <button
+            type="button"
+            onClick={
+              imprimirComprovante
+            }
+          >
+            🖨️ Imprimir comprovante
+          </button>
+
+          {" "}
+
+          <button
+            type="button"
+            onClick={
+              novaVenda
+            }
+          >
+            🛒 Nova venda
+          </button>
+
         </div>
-
-        <div>
-          <label>Quantidade</label>
-
-          <input
-            type="number"
-            value={quantidade}
-            onChange={(event) => setQuantidade(event.target.value)}
-            placeholder="0"
-          />
-        </div>
-
-        <div>
-          <label>Preço unitário</label>
-
-          <input
-            type="number"
-            step="0.01"
-            value={preco}
-            onChange={(event) => setPreco(event.target.value)}
-            placeholder="0,00"
-          />
-        </div>
-
-        <button type="submit">
-          💰 Realizar venda
-        </button>
-
-      </form>
-
-      <hr />
-
-      <h3>Histórico de vendas</h3>
-
-      <table>
-
-        <thead>
-          <tr>
-            <th>Produto</th>
-            <th>Quantidade</th>
-            <th>Preço</th>
-            <th>Total</th>
-            <th>Data</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
-
-        <tbody>
-
-          {vendas.map((venda, index) => (
-            <tr key={index}>
-
-              <td>{venda.produto}</td>
-
-              <td>{venda.quantidade}</td>
-
-              <td>
-                R$ {venda.preco.toFixed(2)}
-              </td>
-
-              <td>
-                R$ {venda.total.toFixed(2)}
-              </td>
-
-              <td>{venda.data}</td>
-
-              <td>
-                <button
-                  onClick={() => excluirVenda(index)}
-                >
-                  🗑️ Excluir
-                </button>
-              </td>
-
-            </tr>
-          ))}
-
-        </tbody>
-
-      </table>
+      )}
 
     </div>
   );
